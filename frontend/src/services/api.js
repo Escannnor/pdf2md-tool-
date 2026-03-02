@@ -22,3 +22,11 @@ export const extractContent = async (data) => {
   const res = await axios.post(`${API_BASE}/extract_content`, form);
   return res.data;
 };
+
+export const saveMarkdown = async ({ title, content }) => {
+  const form = new FormData();
+  if (title) form.append("title", title);
+  form.append("content", content);
+  const res = await axios.post(`${API_BASE}/save_markdown`, form);
+  return res.data;
+};

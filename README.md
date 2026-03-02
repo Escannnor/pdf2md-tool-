@@ -1,6 +1,6 @@
 # PDF to Markdown Tool
 
-A web application that converts PDF content to Markdown format with text and image extraction capabilities.
+A web application that converts PDF content to Markdown format with text and image extraction capabilities, and lets you share the extracted content as a public web link.
 
 ## Features
 
@@ -9,12 +9,33 @@ A web application that converts PDF content to Markdown format with text and ima
 - Select regions to extract text and images
 - Export extracted content as Markdown
 - Real-time preview of extracted content
+- Generate shareable web links that render your Markdown as a nicely formatted page
 
 ## Tech Stack
 
 - **Frontend**: React + Vite + Konva + React-PDF
-- **Backend**: FastAPI + PyMuPDF + Uvicorn
+- **Backend**: FastAPI + PyMuPDF + Uvicorn + markdown2
 - **File Processing**: PDF text and image extraction
+
+## How It Works
+
+- **Extraction flow**
+  - Upload a PDF from the frontend; the file is stored by the FastAPI backend under `uploads/`.
+  - Use the PDF viewer to navigate pages and drag-select regions.
+  - The frontend calls `POST /extract_content`, which:
+    - Extracts text from the selected region.
+    - Extracts images that intersect the region and embeds them into the markdown as `![Image](data:image/...)`.
+  - The selected regions are appended into a single **Extracted Markdown Content** area in the UI where you can edit the markdown.
+
+- **Sharing flow**
+  - Click **“🔗 Get shareable link”** in the UI.
+  - The frontend sends the current markdown (and an optional title derived from the PDF filename) to `POST /save_markdown`.
+  - The backend:
+    - Stores the markdown under `uploads/pages/<slug>.md`.
+    - Returns a public URL like `BASE_URL/share/<slug>`.
+  - Visiting that URL calls `GET /share/{slug}`, which:
+    - Loads the stored markdown.
+    - Converts it to HTML using `markdown2` with GitHub-like styling (headings, lists, code blocks, tables, images, etc.).
 
 ## Local Development
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { pdfjs } from 'react-pdf';
 import PDFViewer from "./components/PDFViewer";
-import { uploadPDF, extractContent } from "./services/api";
+import { uploadPDF, extractContent, saveMarkdown } from "./services/api";
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -16,6 +16,8 @@ export default function App() {
   const [markdownContent, setMarkdownContent] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [savingLink, setSavingLink] = useState(false);
 
   const handleUpload = async (e) => {
     const f = e.target.files[0];
@@ -64,6 +66,8 @@ export default function App() {
       if (res.markdown && res.markdown.trim()) {
         setMarkdownContent(prev => {
           const newContent = prev ? `${prev}\n\n${res.markdown}` : res.markdown;
+          // Reset share URL when content changes
+          setShareUrl("");
           return newContent;
         });
         
@@ -95,6 +99,42 @@ export default function App() {
   const clearMarkdown = () => {
     setMarkdownContent("");
     setSelectedText("");
+    setShareUrl("");
+  };
+
+  const handleSaveLink = async () => {
+    if (!markdownContent.trim()) return;
+
+    setError("");
+    setSavingLink(true);
+
+    try {
+      const title =
+        file?.name?.toLowerCase().endsWith(".pdf")
+          ? file.name.slice(0, -4)
+          : file?.name || "Extracted content";
+
+      const res = await saveMarkdown({
+        title,
+        content: markdownContent,
+      });
+
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+
+      setShareUrl(res.url);
+    } catch (err) {
+      console.error("Save link error:", err);
+      setError(
+        `Failed to create shareable link: ${
+          err.response?.data?.detail || err.message || "Unknown error"
+        }`
+      );
+    } finally {
+      setSavingLink(false);
+    }
   };
 
   return (
@@ -142,6 +182,23 @@ export default function App() {
             >
               🗑️ Clear
             </button>
+            <button
+              onClick={handleSaveLink}
+              disabled={savingLink}
+              style={{
+                padding: '8px 16px',
+                background: '#2196F3',
+                color: 'white',
+                border: 'none',
+                borderRadius: 4,
+                cursor: savingLink ? 'default' : 'pointer',
+                opacity: savingLink ? 0.7 : 1,
+                position: 'relative',
+                zIndex: 10
+              }}
+            >
+              {savingLink ? "Saving..." : "🔗 Get shareable link"}
+            </button>
           </div>
           <textarea
             style={{ 
@@ -155,6 +212,22 @@ export default function App() {
             value={markdownContent}
             onChange={(e) => setMarkdownContent(e.target.value)}
           />
+          {shareUrl && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: 10,
+                background: '#e3f2fd',
+                borderRadius: 4,
+                border: '1px solid #90caf9',
+              }}
+            >
+              <strong>Shareable link:</strong>{" "}
+              <a href={shareUrl} target="_blank" rel="noreferrer">
+                {shareUrl}
+              </a>
+            </div>
+          )}
           {selectedText && (
             <div style={{ marginTop: 10, padding: 10, background: '#f0f0f0', borderRadius: 4 }}>
               <strong>Last selection:</strong>
